@@ -1,0 +1,31 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+
+# production / build output
+dist
+build
+.vercel
+
+# vite cache
+.vite
+
+# misc
+.DS_Store
+*.local
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# env files (Vercel manages environment variables in the dashboard)
+.env
+.env.*
+!.env.example
