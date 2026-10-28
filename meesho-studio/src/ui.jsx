@@ -1,8 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  MEESHO_BASE_VARIANTS, AMAZON_BASE_VARIANTS, PRESETS, GROUP_META, SHIPPING_ESTIMATES,
-  STICKERS, PALETTE, buildVariants, generateAll, downloadOne, downloadZip,
-} from './lib/engine.js';
+import { GROUP_META, SHIPPING_ESTIMATES, downloadOne } from './lib/engine.js';
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB upload cap
 
 /* ------------------------------------------------------------------ */
 /* Toasts                                                              */
@@ -80,8 +79,10 @@ export function Dropzone({ file, previewUrl, onSelect, onRemove, disabled, multi
   const handleFiles = useCallback((flist) => {
     const files = Array.from(flist || []).filter((f) => f.type.startsWith('image/'));
     if (!files.length) return;
-    const tooBig = files.find((f) => f.size > 10 * 1024 * 1024);
-    if (tooBig) return { error: 'Images must be under 10MB' };
+    if (files.some((f) => f.size > MAX_FILE_BYTES)) {
+      // oversize images are rejected silently — the parent shows no error UI
+      return;
+    }
     onSelect(multiple ? files : files[0]);
   }, [onSelect, multiple]);
 
@@ -208,5 +209,3 @@ export function VariantGrid({ variants, selected, onToggle, onSelectAll, pro }) 
     </div>
   );
 }
-
-export { PALETTE, STICKERS, PRESETS, MEESHO_BASE_VARIANTS, AMAZON_BASE_VARIANTS, buildVariants, generateAll, downloadZip };
