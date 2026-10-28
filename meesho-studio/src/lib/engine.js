@@ -286,11 +286,19 @@ function detectContentBox(img) {
   return { x: minX * step, y: minY * step, w: (maxX - minX) * step, h: (maxY - minY) * step };
 }
 
+// Draw *src*'s content box (or whole image if no box) cropped onto a new canvas.
+function cropToBox(src, box) {
+  const cropped = document.createElement('canvas');
+  cropped.width = Math.max(1, box.w);
+  cropped.height = Math.max(1, box.h);
+  cropped.getContext('2d').drawImage(src, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+  return cropped;
+}
+
 /* ---------------- core renderer ---------------- */
 
 export async function renderVariant(img, variant, opts) {
   const {
-    platformKey = 'meesho',
     width = 1200,
     height = 1200,
     stickersAllowed = true,
@@ -328,26 +336,14 @@ export async function renderVariant(img, variant, opts) {
 
   // Work on a possibly pre-processed source image
   let srcImg = img;
-  let box = null;
-  if (removeBg) {
-    const cut = removeBackground(img);
-    srcImg = cut;
-    box = detectContentBox(cut);
-    if (box && (box.w < cut.width * 0.98 || box.h < cut.height * 0.98)) {
-      const cropped = document.createElement('canvas');
-      cropped.width = Math.max(1, box.w);
-      cropped.height = Math.max(1, box.h);
-      cropped.getContext('2d').drawImage(cut, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-      srcImg = cropped;
+  if (removeBg || autoCrop) {
+    if (removeBg) {
+      srcImg = removeBackground(img);
     }
-  } else if (autoCrop) {
-    box = detectContentBox(img);
-    if (box && (box.w < img.width * 0.97 || box.h < img.height * 0.97)) {
-      const cropped = document.createElement('canvas');
-      cropped.width = Math.max(1, box.w);
-      cropped.height = Math.max(1, box.h);
-      cropped.getContext('2d').drawImage(img, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-      srcImg = cropped;
+    const box = detectContentBox(srcImg);
+    const threshold = removeBg ? 0.98 : 0.97;
+    if (box && (box.w < srcImg.width * threshold || box.h < srcImg.height * threshold)) {
+      srcImg = cropToBox(srcImg, box);
     }
   }
 
@@ -495,24 +491,9 @@ export async function generateAll(file, variants, settings, onProgress) {
   const img = await loadImage(file);
   const results = [];
   for (let i = 0; i < variants.length; i++) {
-    const v = variants[i];
-    const r = await renderVariant(img, v, {
-      width: settings.width,
-      height: settings.height,
-      stickersAllowed: settings.stickersAllowed,
-      compress: settings.compress,
-      targetKB: settings.targetKB,
-      quality: settings.quality,
-      format: settings.format,
-      background: settings.background,
-      brandColor: settings.brandColor,
-      watermark: settings.watermark,
-      removeBg: settings.removeBg,
-      autoCrop: settings.autoCrop,
-      brightness: settings.brightness,
-      contrast: settings.contrast,
-      saturation: settings.saturation,
-    });
+    // renderVariant picks the options it needs from `settings` and applies
+    // its own defaults for anything missing.
+    const r = await renderVariant(img, variants[i], settings);
     results.push(r);
     if (onProgress) onProgress(Math.round(((i + 1) / variants.length) * 100));
     // yield to keep UI responsive

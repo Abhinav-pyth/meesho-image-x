@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   SHIPPING_RATES, SHIPPING_ZONES, GST_RATE, forwardShipping, rtoCost,
 } from './lib/engine.js';
+import { Field } from './ui.jsx';
 
 const WEIGHTS = [500, 1000, 1500, 2000, 2500, 3000];
 
@@ -129,8 +130,4 @@ export default function ShippingGuidePage() {
       </div>
     </div>
   );
-}
-
-function Field({ label, children }) {
-  return <div className="field"><label>{label}</label>{children}</div>;
 }

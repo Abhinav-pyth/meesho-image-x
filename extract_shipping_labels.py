@@ -71,7 +71,7 @@ def find_order_id(text: str, marketplace: str) -> str:
         if m:
             cand = m.group(1).strip("-")
             # reject pincodes / phone digits masquerading as order ids
-            if re.fullmatch(r"\d+", cand) and len(cand) not in range(10, 21):
+            if re.fullmatch(r"\d+", cand) and not 10 <= len(cand) <= 20:
                 continue
             return cand
     return ""
@@ -249,13 +249,51 @@ def extract_label_fields(page_text: str) -> dict:
                    page_text, re.IGNORECASE)
     row["weight"] = wt.group(1).strip() if wt else ""
 
-    # email bonus column appended only if present anywhere
     return row
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+def iter_label_chunks(text: str):
+    """Yield one text chunk per label on a page.
+
+    A page may contain multiple labels; split before marketplace headings and
+    skip chunks that repeat an already-seen (marketplace, order id) pair.
+    """
+    chunks = re.split(r"(?=(?:MEESHO|FLIPKART|AMAZON)\b)", text, flags=re.IGNORECASE)
+    seen_keys = set()
+    for chunk in chunks:
+        mp = detect_marketplace(chunk)
+        if mp == "Unknown" and len(chunks) > 1:
+            continue
+        key = (mp, find_order_id(chunk, mp))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        yield chunk
+
+
+def extract_rows(reader) -> list:
+    """Build one CSV-ready row per shipping label found in the PDF."""
+    rows = []
+    for i, page in enumerate(reader.pages):
+        try:
+            text = page.extract_text() or ""
+        except Exception as e:
+            print(f"warning: page {i+1} unreadable ({e})", file=sys.stderr)
+            continue
+        if not text.strip():
+            print(f"warning: page {i+1} has no text layer (image-only scan? needs OCR)",
+                  file=sys.stderr)
+            continue
+        for chunk in iter_label_chunks(text):
+            row = extract_label_fields(chunk)
+            row["email"] = ";".join(sorted(set(EMAIL_RE.findall(chunk))))
+            rows.append(row)
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser(description="Extract shipping-label info to CSV")
     ap.add_argument("pdf", help="Path to the labels PDF")
@@ -267,46 +305,10 @@ def main():
         sys.exit(f"File not found: {pdf_path}")
 
     reader = PdfReader(str(pdf_path))
-    rows = []
-    emails = set()
-    for i, page in enumerate(reader.pages):
-        try:
-            text = page.extract_text() or ""
-        except Exception as e:
-            print(f"warning: page {i+1} unreadable ({e})", file=sys.stderr)
-            text = ""
-        if not text.strip():
-            print(f"warning: page {i+1} has no text layer (image-only scan? needs OCR)",
-                  file=sys.stderr)
-            continue
-        emails.update(EMAIL_RE.findall(text))
-        # A page may contain multiple labels; split before marketplace headings.
-        chunks = re.split(r"(?=(?:MEESHO|FLIPKART|AMAZON)\b)", text, flags=re.IGNORECASE)
-        seen_marketplaces = set()
-        for chunk in chunks:
-            mp = detect_marketplace(chunk)
-            if mp == "Unknown" and len(chunks) > 1:
-                continue
-            key = (mp, find_order_id(chunk, mp))
-            if key in seen_marketplaces:
-                continue
-            seen_marketplaces.add(key)
-            row = extract_label_fields(chunk)
-            row["email"] = ";".join(sorted(set(EMAIL_RE.findall(chunk))))
-            rows.append(row)
+    rows = extract_rows(reader)
 
     if not rows:
         sys.exit("No label data extracted — is this a text-based PDF?")
-
-    # merge duplicate rows (same order id + marketplace)
-    uniq, seen = [], set()
-    for r in rows:
-        k = (r["marketplace"], r["order_id"])
-        if k in seen:
-            continue
-        seen.add(k)
-        uniq.append(r)
-    rows = uniq
 
     out_csv = Path(args.output) if args.output else pdf_path.with_suffix(".csv")
     any_emails = any(r.get("email") for r in rows)

@@ -64,53 +64,37 @@ def strip_masked_aadhaar(value: str) -> str:
     return f"XXXX-XXXX-{digits[-4:]}" if len(digits) == 12 else value
 
 
+def extract_field(text: str, pattern: re.Pattern, group: int = 0) -> str:
+    """Return the first match of *pattern* in *text*, or ''."""
+    m = pattern.search(text)
+    return m.group(group).strip() if m else ""
+
+
 def extract_fields(text: str) -> dict:
     fields = {}
 
-    m = EMAIL_RE.search(text)
-    if m:
-        fields["email"] = m.group(0)
+    fields["email"] = extract_field(text, EMAIL_RE)
+    fields["name"] = extract_field(text, NAME_LABEL_RE, 1).rstrip(".,")
+    fields["date_of_birth"] = extract_field(text, DOB_LABEL_RE, 1)
 
-    m = NAME_LABEL_RE.search(text)
-    if m:
-        fields["name"] = m.group(1).strip().rstrip(".,")
-
-    m = DOB_LABEL_RE.search(text)
-    if m:
-        fields["date_of_birth"] = m.group(1).strip()
-
+    # search for phones with emails masked out so addresses don't leak digits
     cleaned = re.sub(EMAIL_RE.pattern, "", text)
     m = PHONE_LABEL_RE.search(cleaned) or PHONE_RE.search(cleaned)
-    if m:
-        digits = re.sub(r"\D", "", m.group(1))
-        if 10 <= len(digits) <= 13:
-            fields["phone"] = m.group(1).strip()
+    if m and 10 <= len(re.sub(r"\D", "", m.group(1))) <= 13:
+        fields["phone"] = m.group(1).strip()
 
-    m = ADDRESS_LABEL_RE.search(text)
-    if m:
-        fields["address"] = m.group(1).strip()
+    fields["address"] = extract_field(text, ADDRESS_LABEL_RE, 1)
+    gender = extract_field(text, GENDER_RE, 1)
+    if gender:
+        fields["gender"] = gender.capitalize()
+    fields["pan"] = extract_field(text, PAN_RE)
+    aadhaar = extract_field(text, AADHAAR_RE)
+    if aadhaar:
+        fields["aadhaar_masked"] = strip_masked_aadhaar(aadhaar)
+    fields["passport_number"] = extract_field(text, PASSPORT_RE)
+    fields["driver_license"] = extract_field(text, DL_RE)
 
-    m = GENDER_RE.search(text)
-    if m:
-        fields["gender"] = m.group(1).capitalize()
-
-    m = PAN_RE.search(text)
-    if m:
-        fields["pan"] = m.group(0)
-
-    m = AADHAAR_RE.search(text)
-    if m:
-        fields["aadhaar_masked"] = strip_masked_aadhaar(m.group(0))
-
-    m = PASSPORT_RE.search(text)
-    if m:
-        fields["passport_number"] = m.group(0)
-
-    m = DL_RE.search(text)
-    if m:
-        fields["driver_license"] = m.group(0)
-
-    return fields
+    return {k: v for k, v in fields.items() if v}
 
 
 def extract_key_values(text: str) -> dict:

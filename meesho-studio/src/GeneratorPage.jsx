@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  MEESHO_BASE_VARIANTS, AMAZON_BASE_VARIANTS, PRESETS, STICKERS, PALETTE,
+  MEESHO_BASE_VARIANTS, AMAZON_BASE_VARIANTS, PRESETS,
   buildVariants, generateAll, downloadOne, downloadZip,
 } from './lib/engine.js';
-import { Dropzone, VariantGrid, Field, Switch, Range, GroupBadge, useToasts } from './ui.jsx';
+import { Dropzone, VariantGrid, Field, Switch, Range, GroupBadge } from './ui.jsx';
 
 const DEFAULT_SETTINGS = {
   platform: 'meesho',
@@ -44,7 +44,9 @@ export default function GeneratorPage({ isPro, goPro, toast }) {
 
   /* effective settings — premium overrides locked for free users */
   const eff = useMemo(() => {
-    if (isPro) return settings;
+    if (isPro) {
+      return { ...settings, stickersAllowed: preset.stickersAllowed };
+    }
     return {
       ...DEFAULT_SETTINGS,
       platform: settings.platform,

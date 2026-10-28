@@ -132,7 +132,7 @@ export default function App() {
             <button className={`linkbtn ${route === 'generator' ? 'active' : ''}`} onClick={() => navigate('generator')}>Image Generator</button>
             <button className={`linkbtn hide-sm ${route === 'shipping' ? 'active' : ''}`} onClick={() => navigate('shipping')}>Shipping Guide</button>
             <button className={`linkbtn hide-sm ${route === 'pricing' ? 'active' : ''}`} onClick={() => navigate('pricing')}>Pricing</button>
-            <button className="btn hero sm" onClick={() => navigate(plan === 'pro' ? 'pricing' : 'pricing')}>
+            <button className="btn hero sm" onClick={() => navigate('pricing')}>
               {plan === 'pro' ? '⭐ Pro active' : '⬆ Go Pro'}
             </button>
           </nav>
