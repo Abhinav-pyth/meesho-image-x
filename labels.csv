@@ -1,4 +1,0 @@
-marketplace,order_id,buyer_name,phone,address,city,state,pincode,product,payment_mode,ship_date,weight,email
-Meesho,OM2410151234567,Rahul Verma,+91 98123 45678,"12 Rose Villa, Sector 18, Noida, Uttar Pradesh - 201301",Noida,Uttar Pradesh,201301,"Cotton Kurti - Blue, Size M",COD,15/10/2026,250 g,
-Flipkart,FKPCOD9012345678,Sneha Iyer,9012345678,"Flat 4B, Palm Grove Apartments Chennai, Tamil Nadu - 600042",Palm Grove Apartments Chennai,Tamil Nadu,600042,Wireless Earbuds Pro X,Prepaid,18/10/2026,120 g,
-Amazon,112-3344556-7788990,Arjun Patel,98765 43210,"5 Lake View Road, Andheri East Mumbai, Maharashtra - 400069",Andheri East Mumbai,Maharashtra,400069,Stainless Steel Water Bottle 1L,COD,20/10/2026,0.5 kg,arjun.patel@example.com
